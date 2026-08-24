@@ -1,0 +1,90 @@
+// ==UserScript==
+// @name         Finance Jharkhand AutoCheck + Login Autofill
+// @namespace    http://tampermonkey.net/
+// @version      1.6
+// @description  Checkbox → Label → OK → Terms → Username → Password
+// @match        https://finance.jharkhand.gov.in/jegras/DepartmentLogin.aspx*
+// @run-at       document-idle
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    console.log("Finance Jharkhand Script Loaded");
+
+    function waitFor(selector, callback) {
+        const el = document.querySelector(selector);
+        if (el) return callback(el);
+        setTimeout(() => waitFor(selector, callback), 100);
+    }
+
+    function fillInput(el, value) {
+        el.focus();
+        el.value = value;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    const USERNAME = "rishavsingh20068@gmail.com";
+    const PASSWORD = "Rishu@123";
+
+    // STEP 0 — First checkbox
+    waitFor("#takenBefore", cb1 => {
+
+        console.log("⏳ Waiting 2 seconds before starting...");
+
+        setTimeout(() => {
+            cb1.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            if (!cb1.checked) {
+                cb1.click();
+                cb1.dispatchEvent(new Event("change", { bubbles: true }));
+                console.log("✔ Checkbox #takenBefore clicked");
+            }
+
+            // STEP 2 — Terms label click
+            waitFor(".custom-control-label[for='customCheck1']", label => {
+
+                label.scrollIntoView({ behavior: "smooth", block: "center" });
+                label.click();
+                console.log("✔ Terms & Conditions label clicked");
+
+                // STEP 3 — OK button
+                waitFor(".close_model.btn.btn-danger", btn => {
+
+                    console.log("⏳ Waiting 1 second before clicking OK...");
+
+                    setTimeout(() => {
+                        btn.click();
+                        console.log("✔ OK Button clicked");
+
+                        // STEP 4 — chkterms checkbox
+                        waitFor("#chkterms", chk => {
+                            if (!chk.checked) {
+                                chk.click();
+                                chk.dispatchEvent(new Event("change", { bubbles: true }));
+                                console.log("✔ chkterms checkbox clicked");
+                            }
+
+                            // STEP 5 — Username
+                            waitFor("#txtLoginId", user => {
+                                fillInput(user, USERNAME);
+                                console.log("✔ Username entered");
+
+                                // STEP 6 — Password
+                                waitFor("#txtPassword", pass => {
+                                    fillInput(pass, PASSWORD);
+                                    console.log("✔ Password entered");
+                                });
+                            });
+                        });
+
+                    }, 1000);
+                });
+            });
+
+        }, 1000);
+    });
+
+})();
