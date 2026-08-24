@@ -1,0 +1,48 @@
+// ==UserScript==
+// @name         JharniBandhan Citizen Login Autofill
+// @match        https://jharnibandhan.gov.in/Citizenentry/citizenlogin*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Apna username aur password yahan daalo
+    const USERNAME = "Rishu2006";
+    const PASSWORD = "Rishu@123";
+
+    function fillField(selector, value) {
+        const el = document.querySelector(selector);
+
+        if (!el) return false;
+
+        el.focus();
+
+        // React/Angular jaise frameworks ke liye native setter
+        const setter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            "value"
+        ).set;
+
+        setter.call(el, value);
+
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+
+        return true;
+    }
+
+    function autofill() {
+        const userFilled = fillField("#username", USERNAME);
+        const passFilled = fillField("#password", PASSWORD);
+
+        if (userFilled && passFilled) {
+            console.log("✓ Username and password filled");
+        } else {
+            setTimeout(autofill, 500);
+        }
+    }
+
+    autofill();
+
+})();
