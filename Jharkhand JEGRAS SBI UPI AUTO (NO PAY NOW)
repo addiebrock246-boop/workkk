@@ -1,0 +1,119 @@
+// ==UserScript==
+// @name         Jharkhand JEGRAS SBI UPI AUTO (NO PAY NOW)
+// @namespace    http://tampermonkey.net/
+// @version      2.6
+// @description  Auto-select SBI ePay + UPI BHIM QR (Stops before Pay Now)
+// @match        https://finance.jharkhand.gov.in/jegras/*
+// @match        https://epay.sbi.bank.in/secure/*
+// @run-at       document-idle
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    console.log("🚀 JEGRAS AUTO SCRIPT STARTED (NO PAY NOW)");
+
+    function waitFor(selector, cb, delay = 300) {
+        const el = document.querySelector(selector);
+        if (el) return cb(el);
+        setTimeout(() => waitFor(selector, cb, delay), delay);
+    }
+
+    /* =========================
+       PAGE 1 – Select SBI ePay
+       ========================= */
+    if (location.href.includes("DeptpaymentPg.aspx")) {
+
+        waitFor("#rbsbiepay", radio => {
+            if (!radio.checked) {
+                radio.checked = true;
+                radio.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+
+            console.log("✔ SBI ePay selected");
+
+            waitFor("#btnSubmit", btn => {
+                setTimeout(() => {
+                    btn.removeAttribute("disabled");
+                    btn.dispatchEvent(new MouseEvent("click", {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                    console.log("✔ Pay Rs button clicked");
+                }, 800);
+            });
+        });
+    }
+
+    /* =========================
+       PAGE 2 – Agreement Page
+       ========================= */
+    if (location.href.includes("frmEgEChallanView.aspx")) {
+
+        window.confirm = () => true;
+
+        waitFor("#ContentPlaceHolder1_rblagree_0", radio => {
+            if (!radio.checked) radio.click();
+
+            waitFor("#ContentPlaceHolder1_btncontinue", btn => {
+                setTimeout(() => {
+                    btn.dispatchEvent(new MouseEvent("click", {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                    console.log("✔ Proceed For Payment clicked");
+                }, 800);
+            });
+        });
+    }
+
+    /* =========================
+       PAGE 3 – SBI ePay Gateway
+       ========================= */
+    if (location.href.includes("epay.sbi.bank.in")) {
+
+        console.log("➡ SBI Gateway Loaded");
+
+        // STEP 1 — Open UPI section
+        waitFor("a[href='#collapseup']", upiTab => {
+            setTimeout(() => {
+                upiTab.dispatchEvent(new MouseEvent("click", {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                }));
+                console.log("✔ UPI section opened");
+
+                // STEP 2 — Select BHIM QR ONLY
+                waitFor("#upiQR1", upiRadio => {
+                    setTimeout(() => {
+
+                        if (!upiRadio.checked) {
+                            upiRadio.checked = true;
+
+                            upiRadio.dispatchEvent(new Event("click", { bubbles: true }));
+                            upiRadio.dispatchEvent(new Event("change", { bubbles: true }));
+
+                            if (typeof window.upiCheck === "function") {
+                                window.upiCheck(upiRadio.id, 1);
+                            }
+
+                            if (typeof window.calcFees === "function") {
+                                window.calcFees("UPI", "BHIMQR", upiRadio, upiRadio.id);
+                            }
+
+                            console.log("✔ BHIM UPI QR selected");
+                            console.log("⛔ PAY NOW NOT CLICKED (Manual action required)");
+                        }
+
+                    }, 1000);
+                });
+
+            }, 1000);
+        });
+    }
+
+})();
