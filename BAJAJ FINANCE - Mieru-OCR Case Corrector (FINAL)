@@ -1,0 +1,139 @@
+// ==UserScript==
+// @name         BAJAJ FINANCE - Mieru-OCR Case Corrector (FINAL)
+// @namespace    http://tampermonkey.net/
+// @version      39.0
+// @description  Mieru-OCR se CAPTCHA bharega, Case manually set hoga
+// @match        https://jharnibandhan.gov.in/*
+// @run-at       document-end
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    console.log("🚀 Mieru-OCR Case Corrector v39.0 LOADED");
+
+    let captchaFilled = false;
+    let attempts = 0;
+
+    // ---- Utility ----
+    function fillField(selector, value) {
+        const el = document.querySelector(selector);
+        if (!el) return false;
+        el.focus();
+        el.value = value;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+    }
+
+    // ---- GRAS Form ----
+    if (location.hostname.includes("jharnibandhan.gov.in") &&
+        !location.href.includes("citizenlogin")) {
+        console.log("➡ GRAS Form Page Detected");
+        function tryFill() {
+            let done = 0;
+            done += fillField('#party1_fullname_en', "BAJAJ FINANCE LIMITED");
+            done += fillField('#party2_fullname_en', "AS PER AGREEMENT WITH BAJAJ FINANCE LIMITED");
+            done += fillField('#payee_fname_en', "BAJAJ FINANCE LIMITED");
+            done += fillField('#payment_reason', "LOAN AGREEMENT");
+            done += fillField('#AMOUNT', "10");
+            done += fillField('#payment_purpose_id', "2");
+            done += fillField('#district_id', "25");
+            done += fillField('#article_id', "4");
+            if (done < 8) {
+                setTimeout(tryFill, 200);
+            } else {
+                console.log("✅ ALL GRAS FIELDS FILLED");
+                const btn = document.querySelector("#launchmodal");
+                if (btn) setTimeout(() => btn.click(), 300);
+            }
+        }
+        setTimeout(tryFill, 900);
+        return;
+    }
+
+    // ---- Citizen Login ----
+    if (location.href.includes("Citizenentry/citizenlogin")) {
+
+        console.log("➡ Citizen Login Page Detected");
+
+        const USERNAME = "Rishu2006";
+        const PASSWORD = "Rishu@123";
+
+        // ---- Username & Password ----
+        setTimeout(() => {
+            fillField("#username", USERNAME);
+            fillField("#password", PASSWORD);
+            console.log("✅ Login credentials filled");
+        }, 1500);
+
+        // ---- CAPTCHA Case Correction ----
+        function waitForCaptcha() {
+            if (captchaFilled) {
+                console.log("✅ CAPTCHA already corrected, skipping...");
+                return;
+            }
+
+            attempts++;
+            if (attempts > 20) {
+                console.warn("⏰ Timed out waiting for Mieru-OCR");
+                return;
+            }
+
+            const captchaInput = document.querySelector('#captcha');
+            if (!captchaInput) {
+                setTimeout(waitForCaptcha, 500);
+                return;
+            }
+
+            if (captchaInput.value.length === 0) {
+                console.log("⏳ Waiting for Mieru-OCR to fill CAPTCHA...");
+                setTimeout(waitForCaptcha, 500);
+                return;
+            }
+
+            const currentValue = captchaInput.value;
+            console.log(`📝 Mieru-OCR filled: "${currentValue}"`);
+
+            // ---- Manual Case Correction ----
+            // 🔥 अपनी CAPTCHA के हिसाब से pattern बदलो
+            // Example: 6wX4Gb → pattern: [lower, lower, upper, lower, upper, lower]
+            function correctCase(text) {
+                if (text.length !== 6) return text;
+                let corrected = '';
+                const pattern = ['lower', 'lower', 'upper', 'lower', 'upper', 'lower'];
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    if (char.match(/[0-9]/)) {
+                        corrected += char;
+                    } else if (pattern[i] === 'upper') {
+                        corrected += char.toUpperCase();
+                    } else {
+                        corrected += char.toLowerCase();
+                    }
+                }
+                return corrected;
+            }
+
+            const fixedValue = correctCase(currentValue);
+            if (fixedValue !== currentValue) {
+                captchaInput.focus();
+                captchaInput.value = fixedValue;
+                captchaInput.dispatchEvent(new Event('input', { bubbles: true }));
+                captchaInput.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`✅ CAPTCHA Case Corrected: "${currentValue}" → "${fixedValue}"`);
+            } else {
+                console.log(`✅ CAPTCHA Case is already correct: "${currentValue}"`);
+            }
+
+            captchaFilled = true;
+        }
+
+        setTimeout(waitForCaptcha, 3000);
+
+        // ---- 🔥 Backup HATAA — ab CAPTCHA ek baar bharega aur ruk jayega ----
+
+    } // End Citizen Login
+
+})();
