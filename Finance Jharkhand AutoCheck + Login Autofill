@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Finance Jharkhand AutoCheck + Login Autofill
+// @name         Finance Jharkhand - CAPTCHA Refresh Password FIX (Ultimate)
 // @namespace    http://tampermonkey.net/
-// @version      1.6
-// @description  Checkbox → Label → OK → Terms → Username → Password
+// @version      5.0
+// @description  Password ko refresh पर हटने से बचाओ — पक्का समाधान
 // @match        https://finance.jharkhand.gov.in/jegras/DepartmentLogin.aspx*
 // @run-at       document-idle
 // @grant        none
@@ -11,80 +11,79 @@
 (function () {
     'use strict';
 
-    console.log("Finance Jharkhand Script Loaded");
-
-    function waitFor(selector, callback) {
-        const el = document.querySelector(selector);
-        if (el) return callback(el);
-        setTimeout(() => waitFor(selector, callback), 100);
-    }
-
-    function fillInput(el, value) {
-        el.focus();
-        el.value = value;
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-
     const USERNAME = "rishavsingh20068@gmail.com";
     const PASSWORD = "Rishu@123";
 
-    // STEP 0 — First checkbox
-    waitFor("#takenBefore", cb1 => {
+    // ============================================
+    // 🔥 पासवर्ड को "अमर" बनाओ — हर 200ms चेक करो
+    // ============================================
+    function keepPasswordAlive() {
+        const passField = document.querySelector("#txtPassword");
+        const userField = document.querySelector("#txtLoginId");
 
-        console.log("⏳ Waiting 2 seconds before starting...");
+        // अगर फील्ड्स नहीं मिलीं, तो रुको
+        if (!passField || !userField) return;
 
+        // अगर यूजरनेम खाली है, तो भरो
+        if (!userField.value) {
+            userField.value = USERNAME;
+            userField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // 🔥 अगर पासवर्ड खाली है, तो तुरंत भरो
+        if (!passField.value) {
+            passField.value = PASSWORD;
+            passField.dispatchEvent(new Event('input', { bubbles: true }));
+            passField.dispatchEvent(new Event('change', { bubbles: true }));
+            console.log("✅ Password restored after being cleared!");
+        }
+    }
+
+    // पहली बार भरो (जब पेज लोड हो)
+    function initialFill() {
+        const userField = document.querySelector("#txtLoginId");
+        const passField = document.querySelector("#txtPassword");
+
+        if (userField && !userField.value) {
+            userField.value = USERNAME;
+            userField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (passField && !passField.value) {
+            passField.value = PASSWORD;
+            passField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
+    // ============================================
+    // 🛡️ पेज लोड होने पर शुरू करो
+    // ============================================
+    if (document.readyState === 'complete') {
         setTimeout(() => {
-            cb1.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            if (!cb1.checked) {
-                cb1.click();
-                cb1.dispatchEvent(new Event("change", { bubbles: true }));
-                console.log("✔ Checkbox #takenBefore clicked");
-            }
-
-            // STEP 2 — Terms label click
-            waitFor(".custom-control-label[for='customCheck1']", label => {
-
-                label.scrollIntoView({ behavior: "smooth", block: "center" });
-                label.click();
-                console.log("✔ Terms & Conditions label clicked");
-
-                // STEP 3 — OK button
-                waitFor(".close_model.btn.btn-danger", btn => {
-
-                    console.log("⏳ Waiting 1 second before clicking OK...");
-
-                    setTimeout(() => {
-                        btn.click();
-                        console.log("✔ OK Button clicked");
-
-                        // STEP 4 — chkterms checkbox
-                        waitFor("#chkterms", chk => {
-                            if (!chk.checked) {
-                                chk.click();
-                                chk.dispatchEvent(new Event("change", { bubbles: true }));
-                                console.log("✔ chkterms checkbox clicked");
-                            }
-
-                            // STEP 5 — Username
-                            waitFor("#txtLoginId", user => {
-                                fillInput(user, USERNAME);
-                                console.log("✔ Username entered");
-
-                                // STEP 6 — Password
-                                waitFor("#txtPassword", pass => {
-                                    fillInput(pass, PASSWORD);
-                                    console.log("✔ Password entered");
-                                });
-                            });
-                        });
-
-                    }, 1000);
-                });
-            });
-
+            initialFill();
+            // हर 200ms में चेक करो
+            setInterval(keepPasswordAlive, 200);
+            console.log("🚀 Password Keeper started — password will never be lost!");
         }, 1000);
+    } else {
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                initialFill();
+                setInterval(keepPasswordAlive, 200);
+                console.log("🚀 Password Keeper started — password will never be lost!");
+            }, 1000);
+        });
+    }
+
+    // ============================================
+    // 🧩 अगर पेज में कोई बदलाव हो (जैसे CAPTCHA Refresh)
+    // ============================================
+    const observer = new MutationObserver(() => {
+        // बस एक बार चेक कर लो
+        keepPasswordAlive();
+    });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
     });
 
 })();
