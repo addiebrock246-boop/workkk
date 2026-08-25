@@ -1,0 +1,101 @@
+// ==UserScript==
+// @name         OTP Auto-Fill (Universal - Both Pages)
+// @namespace    http://tampermonkey.net/
+// @version      18.0
+// @description  OTP Auto-Fill for JharniBandhan (8-digit) and Finance (6/8 alphanumeric)
+// @match        https://jharnibandhan.gov.in/Citizenentry/citizenlogin*
+// @match        https://finance.jharkhand.gov.in/jegras/DepartmentLoginOtpverify.aspx*
+// @grant        GM_xmlhttpRequest
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    let lastFilledOtp = '';
+
+    function fetchOTP() {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: "http://localhost:3111/otp",
+            onload: function(response) {
+                let otp = response.responseText.trim();
+                console.log("📥 Raw OTP from server:", otp);
+
+                if (!otp || otp.length === 0) {
+                    console.log("⏳ No OTP available yet...");
+                    return;
+                }
+
+                // सिर्फ Alphanumeric (A-Z, 0-9) रखो
+                let cleaned = otp.replace(/\s/g, '').replace(/[^A-Z0-9]/gi, '');
+                console.log("📥 Cleaned OTP:", cleaned);
+
+                // 🔥 OTP की लंबाई पेज के हिसाब से चेक करो
+                let isValid = false;
+                if (window.location.href.includes('jharnibandhan.gov.in')) {
+                    // JharniBandhan: 8 अंक
+                    if (cleaned.length === 8 && /^\d+$/.test(cleaned)) {
+                        isValid = true;
+                    } else {
+                        console.warn(`⚠️ JharniBandhan needs exactly 8 digits. Got: ${cleaned}`);
+                        return;
+                    }
+                } else if (window.location.href.includes('finance.jharkhand.gov.in')) {
+                    // Finance: 6 या 8 अंक/अक्षर (alphanumeric)
+                    if (cleaned.length === 6 || cleaned.length === 8) {
+                        isValid = true;
+                    } else {
+                        console.warn(`⚠️ Finance needs 6 or 8 chars. Got: ${cleaned}`);
+                        return;
+                    }
+                }
+
+                if (!isValid) return;
+
+                // 🔥 OTP फील्ड ढूंढो (पेज के हिसाब से)
+                let otpField = null;
+                if (window.location.href.includes('jharnibandhan.gov.in')) {
+                    otpField = document.querySelector('#otp') ||
+                               document.querySelector('input[name="otp"]');
+                } else if (window.location.href.includes('finance.jharkhand.gov.in')) {
+                    otpField = document.querySelector('#txtOTP') ||
+                               document.querySelector('input[name="txtOTP"]');
+                }
+
+                if (!otpField) {
+                    console.warn("❌ OTP field not found on this page!");
+                    return;
+                }
+
+                // अगर फील्ड में पहले से यही OTP है, तो दोबारा मत भरो
+                if (otpField.value === cleaned) {
+                    console.log("⏳ Same OTP already in field, skipping...");
+                    return;
+                }
+
+                // 🔥 maxlength हटाओ (अगर 6 सेट है तो)
+                if (otpField.maxLength === 6) {
+                    otpField.maxLength = 10;
+                }
+
+                // 🔥 नया OTP भरो
+                otpField.focus();
+                otpField.value = cleaned;
+                otpField.dispatchEvent(new Event('input', { bubbles: true }));
+                otpField.dispatchEvent(new Event('change', { bubbles: true }));
+                lastFilledOtp = cleaned;
+                console.log(`✅ OTP Auto-Filled: ${cleaned}`);
+            },
+            onerror: function() {
+                console.log("⏳ Waiting for OTP from local server...");
+            }
+        });
+    }
+
+    // पेज लोड होने पर OTP fetch करो (थोड़ी देर बाद)
+    setTimeout(fetchOTP, 3000);
+
+    // हर 2 सेकंड में चेक करो
+    setInterval(fetchOTP, 2000);
+
+})();
